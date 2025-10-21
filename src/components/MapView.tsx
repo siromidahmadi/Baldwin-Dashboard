@@ -1,6 +1,6 @@
 'use client';
 
-import Map, { Source, Layer, Marker, NavigationControl } from 'react-map-gl';
+import Map, { Source, Layer, Marker, NavigationControl, Popup } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
@@ -14,6 +14,8 @@ type Sensors = {
 export default function MapView() {
   const [geojson, setGeojson] = useState<any | null>(null);
   const [sensors, setSensors] = useState<Sensors | null>(null);
+  const [popup, setPopup] = useState<{ lng: number; lat: number; type: 'aq' | 'wind' | 'sw'; data: any } | null>(null);
+  const [cursor, setCursor] = useState<string>('');
 
   useEffect(() => {
     fetch('/data/baldwin-corridor.geojson')
@@ -52,6 +54,30 @@ export default function MapView() {
         mapboxAccessToken={token}
         initialViewState={{ longitude: -118.361, latitude: 34.012, zoom: 12 }}
         mapStyle="mapbox://styles/mapbox/light-v11"
+        interactiveLayerIds={['aq-points', 'sw-lines']}
+        onClick={(e) => {
+          const f = e.features && e.features[0];
+          if (f && f.layer && f.layer.id === 'aq-points') {
+            const coords = (f.geometry as any).coordinates as [number, number];
+            setPopup({ lng: coords[0], lat: coords[1], type: 'aq', data: { pm25: f.properties?.pm25 } });
+          } else if (f && f.layer && f.layer.id === 'sw-lines') {
+            const coords = (f.geometry as any).coordinates as [number, number][];
+            const midLng = (coords[0][0] + coords[coords.length - 1][0]) / 2;
+            const midLat = (coords[0][1] + coords[coords.length - 1][1]) / 2;
+            setPopup({ lng: midLng, lat: midLat, type: 'sw', data: { flow: f.properties?.flow } });
+          } else {
+            setPopup(null);
+          }
+        }}
+        onMouseMove={(e) => {
+          const f = e.features && e.features[0];
+          if (f && (f.layer?.id === 'aq-points' || f.layer?.id === 'sw-lines')) {
+            setCursor('pointer');
+          } else {
+            setCursor('');
+          }
+        }}
+        cursor={cursor}
       >
         <NavigationControl position="top-left" />
         {geojson && (
@@ -148,11 +174,47 @@ export default function MapView() {
             {sensors.wind.map((w) => (
               <Marker key={w.id} longitude={w.lon} latitude={w.lat} anchor="center">
                 <div
+                  role="button"
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    setPopup({ lng: w.lon, lat: w.lat, type: 'wind', data: { speed: w.speed, deg: w.deg } });
+                  }}
+                  title={`Wind ${w.speed} m/s @ ${w.deg}°`}
                   style={{ transform: `rotate(${w.deg}deg)` }}
-                  className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[14px] border-b-gray-700 drop-shadow"
+                  className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[14px] border-b-gray-700 drop-shadow cursor-pointer"
                 />
               </Marker>
             ))}
+
+            {popup && (
+              <Popup
+                longitude={popup.lng}
+                latitude={popup.lat}
+                anchor="top"
+                closeOnClick={false}
+                onClose={() => setPopup(null)}
+              >
+                {popup.type === 'aq' && (
+                  <div className="text-sm">
+                    <div className="font-semibold">Air Quality</div>
+                    <div>PM2.5: {popup.data.pm25}</div>
+                  </div>
+                )}
+                {popup.type === 'wind' && (
+                  <div className="text-sm">
+                    <div className="font-semibold">Wind</div>
+                    <div>Speed: {popup.data.speed} m/s</div>
+                    <div>Direction: {popup.data.deg}°</div>
+                  </div>
+                )}
+                {popup.type === 'sw' && (
+                  <div className="text-sm">
+                    <div className="font-semibold">Stormwater</div>
+                    <div>Flow: {popup.data.flow}</div>
+                  </div>
+                )}
+              </Popup>
+            )}
           </>
         )}
       </Map>
