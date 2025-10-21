@@ -15,6 +15,7 @@ export default function MapView() {
   const [geojson, setGeojson] = useState<any | null>(null);
   const [sensors, setSensors] = useState<Sensors | null>(null);
   const [popup, setPopup] = useState<{ lng: number; lat: number; type: 'aq' | 'wind' | 'sw'; data: any } | null>(null);
+  const [hover, setHover] = useState<{ lng: number; lat: number; type: 'aq' | 'sw'; data: any } | null>(null);
   const [cursor, setCursor] = useState<string>('');
 
   useEffect(() => {
@@ -73,8 +74,18 @@ export default function MapView() {
           const f = e.features && e.features[0];
           if (f && (f.layer?.id === 'aq-points' || f.layer?.id === 'sw-lines')) {
             setCursor('pointer');
+            if (f.layer.id === 'aq-points') {
+              const coords = (f.geometry as any).coordinates as [number, number];
+              setHover({ lng: coords[0], lat: coords[1], type: 'aq', data: { pm25: f.properties?.pm25 } });
+            } else if (f.layer.id === 'sw-lines') {
+              const coords = (f.geometry as any).coordinates as [number, number][];
+              const midLng = (coords[0][0] + coords[coords.length - 1][0]) / 2;
+              const midLat = (coords[0][1] + coords[coords.length - 1][1]) / 2;
+              setHover({ lng: midLng, lat: midLat, type: 'sw', data: { flow: f.properties?.flow } });
+            }
           } else {
             setCursor('');
+            setHover(null);
           }
         }}
         cursor={cursor}
@@ -186,6 +197,30 @@ export default function MapView() {
               </Marker>
             ))}
 
+            {hover && (
+              <Popup
+                longitude={hover.lng}
+                latitude={hover.lat}
+                anchor="top"
+                closeButton={false}
+                closeOnClick={false}
+                offset={10}
+              >
+                {hover.type === 'aq' && (
+                  <div className="text-xs">
+                    <div className="font-semibold">Air Quality</div>
+                    <div>PM2.5: {hover.data.pm25}</div>
+                  </div>
+                )}
+                {hover.type === 'sw' && (
+                  <div className="text-xs">
+                    <div className="font-semibold">Stormwater</div>
+                    <div>Flow: {hover.data.flow}</div>
+                  </div>
+                )}
+              </Popup>
+            )}
+
             {popup && (
               <Popup
                 longitude={popup.lng}
@@ -218,6 +253,23 @@ export default function MapView() {
           </>
         )}
       </Map>
+
+      {/* Legend */}
+      <div className="pointer-events-none absolute top-4 right-4 bg-white/90 backdrop-blur rounded-lg shadow px-3 py-2 text-xs text-gray-700">
+        <div className="font-semibold mb-1">Legend</div>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-3 h-3 rounded-full bg-[#0ea5e9]"></span>
+          <span>Air Quality Points (PM2.5)</span>
+        </div>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-5 h-0 border-t-2 border-[#22c55e]"></span>
+          <span>Stormwater Flow (width ∝ flow)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[10px] border-b-gray-700"></span>
+          <span>Wind Direction</span>
+        </div>
+      </div>
     </div>
   );
 }
