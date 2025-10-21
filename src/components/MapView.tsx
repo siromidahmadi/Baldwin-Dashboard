@@ -17,6 +17,8 @@ export default function MapView() {
   const [popup, setPopup] = useState<{ lng: number; lat: number; type: 'aq' | 'wind' | 'sw'; data: any } | null>(null);
   const [hover, setHover] = useState<{ lng: number; lat: number; type: 'aq' | 'sw'; data: any } | null>(null);
   const [cursor, setCursor] = useState<string>('');
+  const [mapStyleUrl, setMapStyleUrl] = useState<string>('mapbox://styles/mapbox/light-v11');
+  const [showHeatmap, setShowHeatmap] = useState<boolean>(true);
 
   useEffect(() => {
     fetch('/data/baldwin-corridor.geojson')
@@ -25,6 +27,24 @@ export default function MapView() {
     axios
       .get('/api/sensors')
       .then((r: { data: Sensors }) => setSensors(r.data));
+  }, []);
+
+  // Apply Settings from localStorage and react to changes
+  useEffect(() => {
+    function apply() {
+      try {
+        const s = localStorage.getItem('map:style');
+        const h = localStorage.getItem('map:heatmap');
+        setMapStyleUrl(s === 'streets' ? 'mapbox://styles/mapbox/streets-v12' : 'mapbox://styles/mapbox/light-v11');
+        setShowHeatmap(h === '0' ? false : true);
+      } catch {}
+    }
+    apply();
+    const handler = (e: StorageEvent) => {
+      if (e.key === 'map:style' || e.key === 'map:heatmap') apply();
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
   }, []);
 
   const corridorFill = useMemo(() => ({
@@ -54,7 +74,7 @@ export default function MapView() {
       <Map
         mapboxAccessToken={token}
         initialViewState={{ longitude: -118.361, latitude: 34.012, zoom: 12 }}
-        mapStyle="mapbox://styles/mapbox/light-v11"
+        mapStyle={mapStyleUrl}
         interactiveLayerIds={['aq-points', 'sw-lines']}
         onClick={(e) => {
           const f = e.features && e.features[0];
@@ -114,6 +134,7 @@ export default function MapView() {
               <Layer
                 id="aq-heatmap"
                 type="heatmap"
+                layout={{ visibility: showHeatmap ? 'visible' : 'none' }}
                 paint={{
                   'heatmap-weight': [
                     'interpolate',
