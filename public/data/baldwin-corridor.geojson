@@ -1,0 +1,19 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Baldwin Hills Corridor" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-118.385, 33.997],
+          [-118.341, 33.997],
+          [-118.341, 34.030],
+          [-118.385, 34.030],
+          [-118.385, 33.997]
+        ]]
+      }
+    }
+  ]
+}
