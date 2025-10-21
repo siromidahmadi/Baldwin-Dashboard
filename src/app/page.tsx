@@ -6,7 +6,7 @@ import FeedbackPanel from '@/components/FeedbackPanel';
 
 export default function Home() {
   // Sample data - in a real app, this would come from an API
-  const metrics = [
+  const metrics: { title: string; value: string; change: string; trend: 'up' | 'down' }[] = [
     { title: 'Total Assets', value: '24', change: '+2.5%', trend: 'up' },
     { title: 'Active Alerts', value: '3', change: '-1', trend: 'down' },
     { title: 'Uptime', value: '99.8%', change: '+0.2%', trend: 'up' },
