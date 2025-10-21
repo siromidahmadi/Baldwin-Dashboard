@@ -3,6 +3,7 @@ import { MetricCard } from '@/components/MetricCard';
 import { StatusIndicator } from '@/components/StatusIndicator';
 import MapView from '@/components/MapView';
 import FeedbackPanel from '@/components/FeedbackPanel';
+import QuickActions from '@/components/QuickActions';
 
 export default function Home() {
   // Sample data - in a real app, this would come from an API
@@ -114,20 +115,7 @@ export default function Home() {
           {/* Quick Actions */}
           <div className="bg-white rounded-xl shadow p-6">
             <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <button className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors">
-                Add New Asset
-              </button>
-              <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                Generate Report
-              </button>
-              <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                View All Alerts
-              </button>
-              <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                System Settings
-              </button>
-            </div>
+            <QuickActions />
           </div>
 
           {/* Community Feedback */}
