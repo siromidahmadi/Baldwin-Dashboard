@@ -1,6 +1,7 @@
 'use client';
 
 import Map, { Source, Layer, Marker, NavigationControl, Popup } from 'react-map-gl';
+import { io } from 'socket.io-client';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
@@ -19,6 +20,7 @@ export default function MapView() {
   const [cursor, setCursor] = useState<string>('');
   const [mapStyleUrl, setMapStyleUrl] = useState<string>('mapbox://styles/mapbox/light-v11');
   const [showHeatmap, setShowHeatmap] = useState<boolean>(true);
+  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL as string | undefined;
 
   useEffect(() => {
     fetch('/data/baldwin-corridor.geojson')
@@ -28,6 +30,26 @@ export default function MapView() {
       .get('/api/sensors')
       .then((r: { data: Sensors }) => setSensors(r.data));
   }, []);
+
+  // Poll sensors periodically if socket is not configured
+  useEffect(() => {
+    if (socketUrl) return;
+    const id = setInterval(() => {
+      axios
+        .get('/api/sensors', { headers: { 'Cache-Control': 'no-cache' } })
+        .then((r: { data: Sensors }) => setSensors(r.data))
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(id);
+  }, [socketUrl]);
+
+  // Optional socket.io subscription when NEXT_PUBLIC_SOCKET_URL is provided
+  useEffect(() => {
+    if (!socketUrl) return;
+    const socket = io(socketUrl, { transports: ['websocket'] });
+    socket.on('sensors', (payload: Sensors) => setSensors(payload));
+    return () => { try { socket.close(); } catch {} };
+  }, [socketUrl]);
 
   // Apply Settings from localStorage and react to changes
   useEffect(() => {
